@@ -14,7 +14,18 @@ enum ScanMode:Int{
 
 public class SwiftFlutterBarcodeScannerPlugin: NSObject, FlutterPlugin, ScanBarcodeDelegate,FlutterStreamHandler {
     
-    public static var viewController = UIViewController()
+    /// Con el ciclo de vida UIScene la ventana cuelga de la escena y no del
+    /// AppDelegate, asi que el controlador se resuelve al momento de usarlo.
+    /// Antes se guardaba al registrarse forzando un valor que ahora es nil, y
+    /// eso tumbaba la app al abrir.
+    public static var viewController: UIViewController {
+        let escenas = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let escena = escenas.first { $0.activationState == .foregroundActive } ?? escenas.first
+        let ventana = escena?.windows.first { $0.isKeyWindow } ?? escena?.windows.first
+        return ventana?.rootViewController
+            ?? (UIApplication.shared.delegate?.window ?? nil)?.rootViewController
+            ?? UIViewController()
+    }
     public static var lineColor:String=""
     public static var cancelButtonText:String=""
     public static var isShowFlashIcon:Bool=false
@@ -24,7 +35,6 @@ public class SwiftFlutterBarcodeScannerPlugin: NSObject, FlutterPlugin, ScanBarc
     public static var scanMode = ScanMode.QR.index
     
     public static func register(with registrar: FlutterPluginRegistrar) {
-        viewController = (UIApplication.shared.delegate?.window??.rootViewController)!
         let channel = FlutterMethodChannel(name: "flutter_barcode_scanner", binaryMessenger: registrar.messenger())
         let instance = SwiftFlutterBarcodeScannerPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
